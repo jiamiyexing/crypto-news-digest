@@ -1,0 +1,22 @@
+name: Daily News Digest
+on:
+  schedule:
+    - cron: "0 1 * * *"   # 每天早上 9:00（北京时间）
+  workflow_dispatch:      # 允许手动点击运行
+
+jobs:
+  digest:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install dependencies
+        run: |
+          pip install requests feedparser openai
+      - name: Run digest
+        env:
+          PUSHPLUS_TOKEN: ${{ secrets.PUSHPLUS_TOKEN }}
+          DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
+        run: python main.py
