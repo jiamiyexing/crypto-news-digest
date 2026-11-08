@@ -6,11 +6,14 @@ from openai import OpenAI
 # ================= 配置区域 =================
 RSS_FEEDS = {
     "crypto_news": [
-        "https://rss.odaily.news/rss/newsflash",
-        "https://rsshub.app/foresightnews/news", 
+        "https://rss.odaily.news/rss/newsflash",           # Odaily 快讯
+        "https://rsshub.app/foresightnews/news",           # Foresight 快讯
+        "https://www.coindesk.com/arc/outboundfeeds/rss/"  # CoinDesk 国际加密源
     ],
     "macro_finance": [
-        "https://rsshub.dicomp.net/jin10",
+        "https://www.reutersagency.com/feed/",             # 路透社商业（宏观权威）
+        "https://feeds.bloomberg.com/markets/news.rss",    # 彭博市场（金融权威）
+        "https://finance.yahoo.com/news/rssindex"          # 雅虎财经（补充视角）
     ],
     "twitter_hot": [
         # 暂留空，AI 会从加密新闻中寻找推特热点
@@ -21,7 +24,7 @@ PUSHPLUS_TOKEN = os.environ.get("PUSHPLUS_TOKEN")
 DEEPSEEK_API_KEY = os.environ.get("DEEPSEEK_API_KEY")
 # ============================================
 
-def fetch_rss_entries(urls, limit_per_feed=5):
+def fetch_rss_entries(urls, limit_per_feed=3):
     """从多个 RSS 源抓取最新条目"""
     entries = []
     for url in urls:
@@ -30,7 +33,7 @@ def fetch_rss_entries(urls, limit_per_feed=5):
             for entry in feed.entries[:limit_per_feed]:
                 entries.append(f"【{feed.feed.get('title', '未知来源')}】{entry.title}\n{entry.get('summary', '')}")
         except Exception as e:
-            print(f"RSS 抓取失败 {url}: {e}")
+            print(f"⚠️ RSS 抓取失败，请检查源是否有效 -> {url} | 错误: {e}")
     return entries
 
 def summarize_with_deepseek(crypto_entries, macro_entries, twitter_entries):
@@ -41,13 +44,13 @@ def summarize_with_deepseek(crypto_entries, macro_entries, twitter_entries):
     请根据以下今日资讯，生成一份结构化的加密与宏观日报。
 
     【加密货币新闻】
-    {chr(10).join(crypto_entries[:10])}
+    {chr(10).join(crypto_entries)}
 
     【推特热门事件】
-    {chr(10).join(twitter_entries[:5]) if twitter_entries else "暂无独立推特源，请从上述加密新闻中提取可能引发推特热议的事件（如马斯克、CZ、V神等的动态）。"}
+    {chr(10).join(twitter_entries) if twitter_entries else "暂无独立推特源，请从上述加密新闻中提取可能引发推特热议的事件（如马斯克、CZ、V神等的动态）。"}
 
     【宏观金融新闻】
-    {chr(10).join(macro_entries[:10])}
+    {chr(10).join(macro_entries)}
 
     【空投与项目进度】
     请从上述加密新闻中，**深度挖掘**涉及空投、TGE、融资或重大进展的项目。
