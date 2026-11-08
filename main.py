@@ -18,11 +18,13 @@ RSS_FEEDS = {
         "https://feeds.bloomberg.com/markets/news.rss",
         "https://finance.yahoo.com/news/rssindex"
     ],
+    # 换用更稳定的国内热点源（微博热搜）和金融源（华尔街见闻）
     "cn_news": [
-        "https://rsshub.app/36kr/newsflashes",
-        "https://rsshub.app/thepaper/featured"
+        "https://rsshub.app/weibo/search/hot",
+        "https://rsshub.app/36kr/newsflashes"
     ],
     "cn_finance": [
+        "https://rsshub.app/wallstreetcn/news/global",
         "https://rsshub.app/cls/telegraph"
     ],
     "twitter_hot": []
@@ -61,11 +63,12 @@ def get_market_data():
         fng_value = fng_resp['data'][0]['value']
         fng_class = fng_resp['data'][0]['value_classification']
         
+        # 把纯净的数据传给 AI
         data_str = f"""
-        【实时行情数据】
-        比特币 (BTC): ${btc_price:,.2f} (24h涨跌: {btc_change:.2f}%)
-        以太坊 (ETH): ${eth_price:,.2f} (24h涨跌: {eth_change:.2f}%)
-        Solana (SOL): ${sol_price:,.2f} (24h涨跌: {sol_change:.2f}%)
+        当前数据：
+        BTC: ${btc_price:,.2f} ({btc_change:.2f}%)
+        ETH: ${eth_price:,.2f} ({eth_change:.2f}%)
+        SOL: ${sol_price:,.2f} ({sol_change:.2f}%)
         加密恐慌与贪婪指数: {fng_value} ({fng_class})
         """
     except Exception as e:
@@ -99,19 +102,19 @@ def summarize_with_deepseek(crypto, btc, macro, cn_news, cn_finance, market_data
     要求生成以下七个板块（用 `### ` 作为标题）：
     
     ### 一、市场行情与情绪
-    **强制要求**：必须明确、单独列出 比特币价格、以太坊价格，以及**“加密恐慌与贪婪指数（具体数值+文字分类）”**，然后再用一两句话总结当前市场情绪。
+    请结合上面提供的实时数据，用一段自然、连贯的分析语言总结当前市场。**必须**在段落中自然地提及比特币价格、以太坊价格以及加密恐慌与贪婪指数的具体数值和分类。不要生硬地罗列。
     
     ### 二、比特币（BTC）专属动态
-    结合价格走势与专项新闻，提炼BTC的核心动向。
+    结合价格走势与专项新闻，深度分析BTC当前的支撑/压力位及核心动向。
     
     ### 三、推特热门与加密大事件
-    提取推特上可能引发热议的事件（黑客攻击、大佬喊话等）。
+    提取推特上可能引发热议的事件（黑客攻击、大佬喊话、重大监管等）。
     
     ### 四、美股与国际宏观
-    剔除纯地缘政治废话。**必须明确列出**美股三大股指（道指、纳指、标普）的动向，以及美联储/宏观数据的重要信息。
+    剔除纯地缘政治废话。**必须明确列出**美股三大股指（道指、纳指、标普）的动向（若新闻未披露具体数据，请说明），以及美联储/宏观数据的重要信息。
     
     ### 五、国内重要新闻（严格限制5条）
-    从【国内综合新闻】中，提炼出前一天国内最重要的 5 条新闻。要求客观、精炼，涵盖政策、商业或社会大事。
+    从【国内综合新闻】中，提炼出前一天国内最重要的 5 条新闻。要求客观、精炼。
     
     ### 六、国内金融动态
     从【国内金融新闻】中，提取关于A股、央行、汇率、房地产或重要监管政策的核心信息。
@@ -119,13 +122,14 @@ def summarize_with_deepseek(crypto, btc, macro, cn_news, cn_finance, market_data
     ### 七、空投与项目进度
     挖掘加密新闻中的空投、TGE、融资项目（项目简介、最新进度，未披露的信息直接注明）。
 
-    语言要精炼专业，全文不超过 2000 字。绝对不要编造没有提及的事实。
+    语言要专业、连贯、有洞察力。绝对不要编造没有提及的事实。
     """
     
     response = client.chat.completions.create(
         model="deepseek-chat",
         messages=[{"role": "system", "content": "你是顶级的跨国金融与加密分析师。"}, {"role": "user", "content": prompt}],
         temperature=0.3,
+        max_tokens=4000  # 放开字数限制
     )
     return response.choices[0].message.content
 
@@ -147,6 +151,7 @@ def main():
         print("未抓取到任何新闻，退出。")
         return
     
+    print(f"抓取完毕：加密 {len(crypto)}，BTC {len(btc)}，国际宏观 {len(macro)}，国内综合 {len(cn_news)}，国内金融 {len(cn_finance)}。")
     print("正在调用 DeepSeek 进行七板块结构化总结...")
     summary = summarize_with_deepseek(crypto, btc, macro, cn_news, cn_finance, market_data)
     
